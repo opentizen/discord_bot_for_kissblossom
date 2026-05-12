@@ -52,7 +52,7 @@
 ---
 
 ## 프로젝트 구조
-
+```
 kissblossom-bot/
 main.py                  # 봇 실행 진입점
 .env                     # 봇 토큰 (비공개)
