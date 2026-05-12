@@ -119,4 +119,4 @@ chmod +x start.sh && ./start.sh
 </div>
 =======
 # discord_bot_for_kissblossom
->>>>>>> e666a073b3fbea90f1264ef7985fe37e484b2281
+>>>>>>>
