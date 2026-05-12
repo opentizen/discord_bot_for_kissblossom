@@ -1,7 +1,7 @@
 <<<<<<< HEAD
 <div align="center">
 
-# 🌸 kissblossom Discord Bot 🌸
+# 🌸 kissblossom discord bot 🌸
 
 **kissblossom 디스코드 서버를 위한 커스텀 봇**
 
