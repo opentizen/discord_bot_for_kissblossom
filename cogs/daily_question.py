@@ -1,9 +1,9 @@
 import discord
 from discord.ext import commands, tasks
+from discord import app_commands
 import datetime
 import random
 
-# 오늘의 질문 목록 (자유롭게 추가/수정 가능!)
 QUESTIONS = [
     "오늘 하루 중 가장 좋았던 순간은 무엇인가요? 🌟",
     "요즘 빠져있는 노래나 아티스트가 있나요? 🎵",
@@ -32,7 +32,6 @@ class DailyQuestion(commands.Cog):
     def cog_unload(self):
         self.daily_task.cancel()
 
-    # 매일 오전 9시(한국 시간)에 자동 실행
     @tasks.loop(time=datetime.time(hour=9, minute=0, tzinfo=KST))
     async def daily_task(self):
         await self.send_question()
@@ -43,7 +42,6 @@ class DailyQuestion(commands.Cog):
 
     async def send_question(self):
         for guild in self.bot.guilds:
-            # '오늘의-질문' 채널 찾기 → 없으면 '일반' → 없으면 시스템 채널
             channel = (
                 discord.utils.get(guild.text_channels, name='오늘의-질문') or
                 discord.utils.get(guild.text_channels, name='일반') or
@@ -60,10 +58,10 @@ class DailyQuestion(commands.Cog):
                 embed.set_footer(text=f'kissblossom · {today}')
                 await channel.send(embed=embed)
 
-    # !질문 명령어 (수동으로 질문 보내기)
-    @commands.command(name='질문')
-    async def manual_question(self, ctx):
-        """관리자가 수동으로 오늘의 질문 전송"""
+    # /질문 슬래시 명령어
+    @app_commands.command(name='질문', description='오늘의 질문을 지금 바로 전송해요')
+    async def manual_question(self, interaction: discord.Interaction):
+        await interaction.response.send_message('오늘의 질문을 전송할게요! 🌸', ephemeral=True)
         await self.send_question()
 
 async def setup(bot):

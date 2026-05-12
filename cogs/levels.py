@@ -1,11 +1,11 @@
 import discord
 from discord.ext import commands
+from discord import app_commands
 import sqlite3
 import random
 import time
 import os
 
-# 데이터베이스 연결 함수
 def get_db():
     os.makedirs('data', exist_ok=True)
     conn = sqlite3.connect('data/bot.db')
@@ -21,29 +21,25 @@ def get_db():
     conn.commit()
     return conn
 
-# 레벨업에 필요한 XP 계산
 def xp_needed(level):
     return 100 * (level + 1)
 
 class Levels(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.cooldowns = {}  # 스팸 방지 (60초 쿨다운)
+        self.cooldowns = {}
 
-    # 메시지 보낼 때마다 XP 지급
     @commands.Cog.listener()
     async def on_message(self, message):
         if message.author.bot or not message.guild:
             return
 
-        # 60초 쿨다운 체크
         key = (message.author.id, message.guild.id)
         now = time.time()
         if key in self.cooldowns and now - self.cooldowns[key] < 60:
             return
         self.cooldowns[key] = now
 
-        # XP 15~25 랜덤 지급
         xp_gain = random.randint(15, 25)
         conn = get_db()
         cur = conn.cursor()
@@ -56,7 +52,6 @@ class Levels(commands.Cog):
                     (message.author.id, message.guild.id))
         xp, level = cur.fetchone()
 
-        # 레벨업 체크
         if xp >= xp_needed(level):
             new_level = level + 1
             cur.execute('UPDATE levels SET level = ?, xp = 0 WHERE user_id = ? AND guild_id = ?',
@@ -74,19 +69,21 @@ class Levels(commands.Cog):
             conn.commit()
             conn.close()
 
-    # !레벨 명령어
-    @commands.command(name='레벨')
-    async def check_level(self, ctx, member: discord.Member = None):
-        member = member or ctx.author
+    # /레벨 슬래시 명령어
+    @app_commands.command(name='레벨', description='내 레벨과 경험치를 확인해요')
+    @app_commands.describe(member='확인할 멤버 (비워두면 본인)')
+    async def check_level(self, interaction: discord.Interaction, member: discord.Member = None):
+        member = member or interaction.user
         conn = get_db()
         cur = conn.cursor()
         cur.execute('SELECT xp, level FROM levels WHERE user_id = ? AND guild_id = ?',
-                    (member.id, ctx.guild.id))
+                    (member.id, interaction.guild.id))
         result = cur.fetchone()
         conn.close()
 
         if not result:
-            await ctx.send(f'**{member.display_name}**님은 아직 채팅을 안 하셨어요!')
+            await interaction.response.send_message(
+                f'**{member.display_name}**님은 아직 채팅을 안 하셨어요!', ephemeral=True)
             return
 
         xp, level = result
@@ -99,17 +96,17 @@ class Levels(commands.Cog):
         embed.add_field(name='경험치', value=f'{xp} / {needed} XP', inline=True)
         embed.add_field(name='진행도', value=f'`{bar}`', inline=False)
         embed.set_thumbnail(url=member.display_avatar.url)
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
-    # !순위 명령어
-    @commands.command(name='순위')
-    async def leaderboard(self, ctx):
+    # /순위 슬래시 명령어
+    @app_commands.command(name='순위', description='서버 레벨 TOP 10 순위를 확인해요')
+    async def leaderboard(self, interaction: discord.Interaction):
         conn = get_db()
         cur = conn.cursor()
         cur.execute('''SELECT user_id, level, xp FROM levels
                        WHERE guild_id = ?
                        ORDER BY level DESC, xp DESC LIMIT 10''',
-                    (ctx.guild.id,))
+                    (interaction.guild.id,))
         rows = cur.fetchall()
         conn.close()
 
@@ -117,13 +114,13 @@ class Levels(commands.Cog):
         medals = ['🥇', '🥈', '🥉']
         desc = ''
         for i, (user_id, level, xp) in enumerate(rows):
-            member = ctx.guild.get_member(user_id)
+            member = interaction.guild.get_member(user_id)
             name = member.display_name if member else '알 수 없음'
             medal = medals[i] if i < 3 else f'**{i+1}.**'
             desc += f'{medal} {name} — Lv.{level} ({xp} XP)\n'
 
         embed.description = desc or '아직 데이터가 없어요!'
-        await ctx.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
 async def setup(bot):
     await bot.add_cog(Levels(bot))

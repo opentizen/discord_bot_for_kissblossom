@@ -3,10 +3,8 @@ from discord.ext import commands
 import os
 from dotenv import load_dotenv
 
-# .env 파일에서 토큰 불러오기
 load_dotenv()
 
-# 봇 권한 설정
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
@@ -18,7 +16,6 @@ async def on_ready():
     print(f'✅ {bot.user.name} 봇이 켜졌어요! 🌸')
     print(f'   서버 {len(bot.guilds)}개에 연결됨')
 
-    # cogs 폴더의 기능들 자동 로드
     for filename in os.listdir('./cogs'):
         if filename.endswith('.py'):
             try:
@@ -27,5 +24,8 @@ async def on_ready():
             except Exception as e:
                 print(f'   ✗ {filename} 로드 실패: {e}')
 
-# 봇 실행
+    # 슬래시 명령어 동기화
+    synced = await bot.tree.sync()
+    print(f'   ✓ 슬래시 명령어 {len(synced)}개 동기화 완료')
+
 bot.run(os.getenv('DISCORD_TOKEN'))
